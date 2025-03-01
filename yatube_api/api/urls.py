@@ -1,8 +1,7 @@
-from django.urls import path
+from django.urls import path, re_path
 
 from rest_framework.authtoken.views import obtain_auth_token
 from rest_framework.routers import DefaultRouter
-from rest_framework_nested import routers
 
 from .views import PostViewSet, GroupViewSet, CommentViewSet
 
@@ -10,13 +9,26 @@ router = DefaultRouter()
 router.register(r'posts', PostViewSet, basename='posts')
 router.register(r'groups', GroupViewSet, basename='groups')
 
-# Создаем вложенный роутер для комментариев
-posts_router = routers.NestedDefaultRouter(router, r'posts', lookup='post')
-posts_router.register(r'comments', CommentViewSet, basename='post-comments')
+urlpatterns = router.urls
 
-urlpatterns = router.urls + posts_router.urls
+urlpatterns += [
+    re_path(
+        r'^posts/(?P<post_pk>[^/.]+)/comments/$',
+        CommentViewSet.as_view({'get': 'list', 'post': 'create'}),
+        name='post-comments-list'
+    ),
+    re_path(
+        r'^posts/(?P<post_pk>[^/.]+)/comments/(?P<pk>[^/.]+)/$',
+        CommentViewSet.as_view({
+            'get': 'retrieve',
+            'put': 'update',
+            'patch': 'partial_update',
+            'delete': 'destroy'
+        }),
+        name='post-comments-detail'
+    ),
+]
 
-# Добавьте этот путь для токена аутентификации
 urlpatterns += [
     path('api-token-auth/', obtain_auth_token, name='api_token_auth'),
 ]
